@@ -1,6 +1,7 @@
 use ExtUtils::MakeMaker;
 
 @scripts = grep {-f } glob("scripts/*.*");
+@theselibs = grep {-f } glob("lib/Font/*");
 
 # incantation to enable MY::pm_to_blib later on
 push(@ExtUtils::MakeMaker::Overridable, qw(pm_to_blib)) if ($^O eq 'MSWin32');
@@ -9,13 +10,11 @@ WriteMakefile (
         NAME => "Font::Fret",
         VERSION_FROM => "lib/Font/Fret.pm",
         EXE_FILES => \@scripts,
+#        HTMLLIBPODS => {map {my $t = $_; $t=~s/\..*?$/.html/o; $t='blib/Html/'.$t; $_ => $t;} @theselibs},
+#        HTMLSCRIPTPODS => {map {my $t=$_; $t=~s/\..*?$/.html/o; $t='blib/Html/'.$t; $_ => $t;} @scripts},
         AUTHOR => "martin_hosken\@sil.org",
         ABSTRACT => "Font REporting Tool",
-        dist => { 'TO_UNIX' => 'perl -Mtounix -e "tounix(\"$(DISTVNAME)\")"' },
-        PREREQ_PM => {
-            'Font::TTF::Font' => 0.13,
-            'Text::PDF::File' => 0.05
-            }
+        dist => { 'TO_UNIX' => 'perl -Mtounix -e "tounix(\"$(DISTVNAME)\")"' }
     );
 
 if ($^O eq 'MSWin32') {

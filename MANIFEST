@@ -1,8 +1,12 @@
 MANIFEST
+MANIFEST.SKIP
 Make.PM
+Makefile
 Makefile.PL
+Setup.bat
 lib/Font/Fret.pm
 pmake.bat
 scripts/comp.plx
 scripts/fret.plx
 scripts/unifret.plx
+tounix.pm

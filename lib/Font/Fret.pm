@@ -24,7 +24,7 @@ require Exporter;
 
 
 BEGIN {
-    $VERSION = "1.200";
+    $VERSION = "1.201";
 
     %sizes = (
         'a4' => [595, 842],
@@ -51,7 +51,7 @@ sub fret
     my (%opt);
     my ($fh, $fdat);
 
-    getopts("fgm:p:qs:", \%opt);
+    getopts("fgh:m:p:qs:", \%opt);
 
     unless (defined $ARGV[0])
     {
@@ -65,6 +65,8 @@ if present)
 
   -f            Don't try to save memory on large fonts (>1000 glyphs)
   -g            Add one glyph per page report following summary report
+  -h            Mode for glyph per page output. Bitfield:
+                1 = bit 0       don't output point positions
   -m points     Sets glyph size in the box regardless of what is calculated
                 Regardless of the consequences for clashes
   -p package    Perl package specification to use for report information
@@ -281,7 +283,7 @@ use strict;
                         && ($gcol = sprintf("%.2f %.2f %.2f rg",
                                             hex($1), hex($2), hex($3)));
                 $glyph = $font->{'loca'}{'glyphs'}[$gid];
-                if ($glyph && $glyph->{'LEN'} != 0)
+                if ($glyph && $glyph->{' LEN'} != 0)
                 {
                     $glyph->read;
                     $xorg = ($glyph->{'xMax'} + $glyph->{'xMin'}) * $tsize / $upem;
@@ -443,7 +445,7 @@ use strict;
                 { $ppage->add(sprintf("%.2f %.2f m %s\n", $x, $y, $blob)); }
             } else
             { $ppage->add(sprintf("%.2f %.2f m %s\n", $x, $y, $offblob)); }
-            if ($txt ne '')
+            if ($txt ne '' && $opt{'h'} & 1 == 0)
             {
                 $tw = $pdf_helv->width($txt) * 4.8 + 2;         # 6pt + 2pt margin
                 $tx = $x + ($dirs[$j][0] > 0 ? 0 : -$tw);

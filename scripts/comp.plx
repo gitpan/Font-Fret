@@ -49,3 +49,4 @@ sub row2
     return ($font->{'post'}{'VAL'}[$gid], $num, $comp[0], $comp[1], $comp[2]);
     }
 }
+
