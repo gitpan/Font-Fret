@@ -1,6 +1,0 @@
-MANIFEST
-Makefile.PL
-lib/Font/Fret.pm
-scripts/comp.plx
-scripts/fret.plx
-scripts/unifret.plx
