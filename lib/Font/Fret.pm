@@ -24,7 +24,7 @@ require Exporter;
 
 
 BEGIN {
-    $VERSION = "1.201";
+    $VERSION = "1.202";
 
     %sizes = (
         'a4' => [595, 842],
@@ -208,7 +208,7 @@ no strict;
 use strict;
     @time = split(/\s+/, localtime());
     $tr = "Printed at $time[3] on $time[0] $time[2] $time[1] $time[4]   Page ";
-    @time = split(/\s+/, localtime(stat($ARGV[0])->mtime));
+    @time = split(/\s+/, localtime($font->{'head'}->getdate));
     $hdrrw = "Modified at $time[3] on $time[0] $time[2] $time[1] $time[4]";
     $rpos = $maxx - 36 - $pdf_helv->width($hdrrw) * 5.6;
     $hdrlft .= "BT 1 0 0 1 $rpos ". ($maxy - 58) . " Tm 80 Tz /FR 7 Tf "

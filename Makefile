@@ -22,7 +22,7 @@
 
 # --- MakeMaker const_config section:
 
-# These definitions are from config.sh (via C:/Progs/Perl/lib/Config.pm)
+# These definitions are from config.sh (via D:/Progs/Perl/lib/Config.pm)
 
 # They may have been overridden via Makefile.PL or on the command line
 AR = lib
@@ -32,8 +32,8 @@ CCDLFLAGS =
 DLEXT = dll
 DLSRC = dl_win32.xs
 LD = link
-LDDLFLAGS = -dll -nologo -nodefaultlib -release  -libpath:"C:\p4view\Apps\ActivePerl\MSI\data\ActivePerl\Perl\lib\CORE"  -machine:x86
-LDFLAGS = -nologo -nodefaultlib -release  -libpath:"C:\p4view\Apps\ActivePerl\MSI\data\ActivePerl\Perl\lib\CORE"  -machine:x86
+LDDLFLAGS = -dll -nologo -nodefaultlib -release  -libpath:"D:\Progs\Perl\lib\CORE"  -machine:x86
+LDFLAGS = -nologo -nodefaultlib -release  -libpath:"D:\Progs\Perl\lib\CORE"  -machine:x86
 LIBC = msvcrt.lib
 LIB_EXT = .lib
 OBJ_EXT = .obj
@@ -50,33 +50,33 @@ AR_STATIC_ARGS = cr
 NAME = Font::Fret
 DISTNAME = Font-Fret
 NAME_SYM = Font_Fret
-VERSION = 1.201
-VERSION_SYM = 1_201
-XS_VERSION = 1.201
+VERSION = 1.202
+VERSION_SYM = 1_202
+XS_VERSION = 1.202
 INST_BIN = blib\bin
 INST_EXE = blib\script
 INST_LIB = blib\lib
 INST_ARCHLIB = blib\arch
 INST_SCRIPT = blib\script
-PREFIX = C:\Progs\Perl
+PREFIX = D:\Progs\Perl
 INSTALLDIRS = site
 INSTALLPRIVLIB = $(PREFIX)\lib
 INSTALLARCHLIB = $(PREFIX)\lib
-INSTALLSITELIB = C:\Progs\Perl\site\lib
-INSTALLSITEARCH = C:\Progs\Perl\site\lib
+INSTALLSITELIB = D:\Progs\Perl\site\lib
+INSTALLSITEARCH = D:\Progs\Perl\site\lib
 INSTALLBIN = $(PREFIX)\bin
 INSTALLSCRIPT = $(PREFIX)\bin
-PERL_LIB = C:\Progs\Perl\lib
-PERL_ARCHLIB = C:\Progs\Perl\lib
-SITELIBEXP = C:\Progs\Perl\site\lib
-SITEARCHEXP = C:\Progs\Perl\site\lib
+PERL_LIB = D:\Progs\Perl\lib
+PERL_ARCHLIB = D:\Progs\Perl\lib
+SITELIBEXP = D:\Progs\Perl\site\lib
+SITEARCHEXP = D:\Progs\Perl\site\lib
 LIBPERL_A = libperl.lib
 FIRST_MAKEFILE = Makefile
 MAKE_APERL_FILE = Makefile.aperl
 PERLMAINCC = $(CC)
-PERL_INC = C:\Progs\Perl\lib\CORE
-PERL = C:\Progs\Perl\bin\Perl.exe
-FULLPERL = C:\Progs\Perl\bin\Perl.exe
+PERL_INC = D:\Progs\Perl\lib\CORE
+PERL = D:\Progs\Perl\bin\Perl.exe
+FULLPERL = D:\Progs\Perl\bin\Perl.exe
 
 VERSION_MACRO = VERSION
 DEFINE_VERSION = -D$(VERSION_MACRO)=\"$(VERSION)\"
@@ -205,7 +205,7 @@ MOD_INSTALL = $(PERL) -I$(INST_LIB) -I$(PERL_LIB) -MExtUtils::Install \
 -e "install({ @ARGV },'$(VERBINST)',0,'$(UNINST)');"
 
 DOC_INSTALL = $(PERL) -e "$$\=\"\n\n\";" \
--e "print '=head2 ', scalar(localtime), ': C<', shift, '>', ' L<', shift, '>';" \
+-e "print '=head2 ', scalar(localtime), ': C<', shift, '>', ' L<', $$arg=shift, '|', $$arg, '>';" \
 -e "print '=over 4';" \
 -e "while (defined($$key = shift) and defined($$val = shift)) { print '=item *';print 'C<', \"$$key: $$val\", '>'; }" \
 -e "print '=back';"
@@ -287,21 +287,21 @@ config :: $(INST_ARCHAUTODIR)\.exists
 config :: $(INST_AUTODIR)\.exists
 	@$(NOOP)
 
-$(INST_AUTODIR)\.exists :: C:\Progs\Perl\lib\CORE\perl.h
+$(INST_AUTODIR)\.exists :: D:\Progs\Perl\lib\CORE\perl.h
 	@$(MKPATH) $(INST_AUTODIR)
-	@$(EQUALIZE_TIMESTAMP) C:\Progs\Perl\lib\CORE\perl.h $(INST_AUTODIR)\.exists
+	@$(EQUALIZE_TIMESTAMP) D:\Progs\Perl\lib\CORE\perl.h $(INST_AUTODIR)\.exists
 
 	-@$(CHMOD) $(PERM_RWX) $(INST_AUTODIR)
 
-$(INST_LIBDIR)\.exists :: C:\Progs\Perl\lib\CORE\perl.h
+$(INST_LIBDIR)\.exists :: D:\Progs\Perl\lib\CORE\perl.h
 	@$(MKPATH) $(INST_LIBDIR)
-	@$(EQUALIZE_TIMESTAMP) C:\Progs\Perl\lib\CORE\perl.h $(INST_LIBDIR)\.exists
+	@$(EQUALIZE_TIMESTAMP) D:\Progs\Perl\lib\CORE\perl.h $(INST_LIBDIR)\.exists
 
 	-@$(CHMOD) $(PERM_RWX) $(INST_LIBDIR)
 
-$(INST_ARCHAUTODIR)\.exists :: C:\Progs\Perl\lib\CORE\perl.h
+$(INST_ARCHAUTODIR)\.exists :: D:\Progs\Perl\lib\CORE\perl.h
 	@$(MKPATH) $(INST_ARCHAUTODIR)
-	@$(EQUALIZE_TIMESTAMP) C:\Progs\Perl\lib\CORE\perl.h $(INST_ARCHAUTODIR)\.exists
+	@$(EQUALIZE_TIMESTAMP) D:\Progs\Perl\lib\CORE\perl.h $(INST_ARCHAUTODIR)\.exists
 
 	-@$(CHMOD) $(PERM_RWX) $(INST_ARCHAUTODIR)
 
@@ -373,9 +373,9 @@ manifypods :
 
 # --- MakeMaker installbin section:
 
-$(INST_SCRIPT)\.exists :: C:\Progs\Perl\lib\CORE\perl.h
+$(INST_SCRIPT)\.exists :: D:\Progs\Perl\lib\CORE\perl.h
 	@$(MKPATH) $(INST_SCRIPT)
-	@$(EQUALIZE_TIMESTAMP) C:\Progs\Perl\lib\CORE\perl.h $(INST_SCRIPT)\.exists
+	@$(EQUALIZE_TIMESTAMP) D:\Progs\Perl\lib\CORE\perl.h $(INST_SCRIPT)\.exists
 
 	-@$(CHMOD) $(PERM_RWX) $(INST_SCRIPT)
 
@@ -419,7 +419,7 @@ $(INST_SCRIPT)\unifret.plx: scripts/unifret.plx Makefile $(INST_SCRIPT)\.exists
 # the Makefile here so a later make realclean still has a makefile to use.
 
 clean ::
-	-$(PERL) -I$(PERL_ARCHLIB) -I$(PERL_LIB) -MExtUtils::Command -e rm_rf ./blib $(MAKE_APERL_FILE) $(INST_ARCHAUTODIR)/extralibs.all perlmain.c mon.out core core.*perl.*.? *perl.core so_locations pm_to_blib *~ */*~ */*/*~ *$(OBJ_EXT) *$(LIB_EXT) perl.exe $(BOOTSTRAP) $(BASEEXT).bso $(BASEEXT).def $(BASEEXT).exp
+	-$(PERL) -I$(PERL_ARCHLIB) -I$(PERL_LIB) -MExtUtils::Command -e rm_rf ./blib $(MAKE_APERL_FILE) $(INST_ARCHAUTODIR)/extralibs.all perlmain.c mon.out core core.*perl.*.? *perl.core so_locations pm_to_blib *$(OBJ_EXT) *$(LIB_EXT) perl.exe $(BOOTSTRAP) $(BASEEXT).bso $(BASEEXT).def $(BASEEXT).exp
 	-$(PERL) -I$(PERL_ARCHLIB) -I$(PERL_LIB) -MExtUtils::Command -e mv Makefile Makefile.old $(DEV_NULL)
 
 
@@ -428,7 +428,7 @@ clean ::
 # Delete temporary files (via clean) and also delete installed files
 realclean purge ::  clean
 	$(PERL) -I$(PERL_ARCHLIB) -I$(PERL_LIB) -MExtUtils::Command -e rm_rf $(INST_AUTODIR) $(INST_ARCHAUTODIR)
-	$(PERL) -I$(PERL_ARCHLIB) -I$(PERL_LIB) -MExtUtils::Command -e rm_f $(INST_LIBDIR)\tounix.pm $(INST_LIB)\Font\Fret.pm
+	$(PERL) -I$(PERL_ARCHLIB) -I$(PERL_LIB) -MExtUtils::Command -e rm_f  $(INST_LIBDIR)\tounix.pm $(INST_LIB)\Font\Fret.pm
 	$(PERL) -I$(PERL_ARCHLIB) -I$(PERL_LIB) -MExtUtils::Command -e rm_rf Makefile Makefile.old
 
 
@@ -447,6 +447,9 @@ skipcheck :
 manifest :
 	$(PERL) -I$(PERL_ARCHLIB) -I$(PERL_LIB) -MExtUtils::Manifest=mkmanifest \
 		-e mkmanifest
+
+veryclean : realclean
+	$(RM_F) *~ *.orig */*~ */*.orig
 
 
 # --- MakeMaker dist_core section:
@@ -627,7 +630,7 @@ Makefile : Makefile.PL $(CONFIGDEP)
 
 # --- MakeMaker makeaperl section ---
 MAP_TARGET    = perl
-FULLPERL      = C:\Progs\Perl\bin\Perl.exe
+FULLPERL      = D:\Progs\Perl\bin\Perl.exe
 
 $(MAP_TARGET) :: static $(MAKE_APERL_FILE)
 	$(MAKE) -f $(MAKE_APERL_FILE) $@
@@ -667,7 +670,7 @@ testdb_static :: testdb_dynamic
 # --- MakeMaker ppd section:
 # Creates a PPD (Perl Package Description) for a binary distribution.
 ppd:
-	@$(PERL) -e "print qq{<SOFTPKG NAME=\"Font-Fret\" VERSION=\"1,201,0,0\">\n}. qq{\t<TITLE>Font-Fret</TITLE>\n}. qq{\t<ABSTRACT>Font REporting Tool</ABSTRACT>\n}. qq{\t<AUTHOR>martin_hosken\@sil.org</AUTHOR>\n}. qq{\t<IMPLEMENTATION>\n}. qq{\t\t<OS NAME=\"$(OSNAME)\" />\n}. qq{\t\t<ARCHITECTURE NAME=\"MSWin32-x86-multi-thread\" />\n}. qq{\t\t<CODEBASE HREF=\"\" />\n}. qq{\t</IMPLEMENTATION>\n}. qq{</SOFTPKG>\n}" > Font-Fret.ppd
+	@$(PERL) -e "print qq{<SOFTPKG NAME=\"Font-Fret\" VERSION=\"1,202,0,0\">\n}. qq{\t<TITLE>Font-Fret</TITLE>\n}. qq{\t<ABSTRACT>Font REporting Tool</ABSTRACT>\n}. qq{\t<AUTHOR>martin_hosken\@sil.org</AUTHOR>\n}. qq{\t<IMPLEMENTATION>\n}. qq{\t\t<OS NAME=\"$(OSNAME)\" />\n}. qq{\t\t<ARCHITECTURE NAME=\"MSWin32-x86-multi-thread\" />\n}. qq{\t\t<CODEBASE HREF=\"\" />\n}. qq{\t</IMPLEMENTATION>\n}. qq{</SOFTPKG>\n}" > Font-Fret.ppd
 
 # --- MakeMaker pm_to_blib section:
 
