@@ -10,8 +10,8 @@ use Text::PDF::Page;
 use Text::PDF::SFont;
 use Text::PDF::TTFont0;
 use Text::PDF::Utils;
-use Font::Metrics::Helvetica;
-use Font::Metrics::HelveticaBold;
+# use Font::Metrics::Helvetica;
+# use Font::Metrics::HelveticaBold;
 
 use Getopt::Std;
 use strict;
@@ -24,7 +24,7 @@ require Exporter;
 
 
 BEGIN {
-    $VERSION = "1.003";
+    $VERSION = "1.200";
 
     %sizes = (
         'a4' => [595, 842],
@@ -46,17 +46,17 @@ BEGIN {
 
 sub fret
 {
-    my ($package, @ARGV) = @_;
+    my ($package) = @_;
     my ($font, $maxx, $maxy, $pdf, $root);
-    my ($opt_s, $opt_p, $opt_q, $opt_m, $opt_f);
+    my (%opt);
     my ($fh, $fdat);
 
-    getopt("fm:p:qs:");
+    getopts("fgm:p:qs:", \%opt);
 
     unless (defined $ARGV[0])
     {
         die <<'EOT';
-FRET [-f] [-s size] [-p package] [-q] font_file [out_file]
+FRET [-f] [-g] [-s size] [-p package] [-q] font_file [out_file]
 Generates a report on a font according to a particular package. In some
 contexts the package may be over-ridden. Paper size may also be specified.
 
@@ -64,6 +64,7 @@ If no out_file is given then out_file becomes font_file.pdf (removing .ttf
 if present)
 
   -f            Don't try to save memory on large fonts (>1000 glyphs)
+  -g            Add one glyph per page report following summary report
   -m points     Sets glyph size in the box regardless of what is calculated
                 Regardless of the consequences for clashes
   -p package    Perl package specification to use for report information
@@ -72,10 +73,10 @@ if present)
 EOT
     }
 
-    $opt_s = lc($opt_s) || 'ltr';
-    $opt_s = 'ltr' unless defined $sizes{$opt_s};
-    ($maxx, $maxy) = @{$sizes{$opt_s}};
-    $package = $opt_p || $package || 'Font::Fret::Default';
+    $opt{s} = lc($opt{s}) || 'ltr';
+    $opt{s} = 'ltr' unless defined $sizes{$opt{s}};
+    ($maxx, $maxy) = @{$sizes{$opt{s}}};
+    $package = $opt{p} || $package || 'Font::Fret::Default';
 
     unless (defined $ARGV[1])
     {
@@ -85,7 +86,7 @@ EOT
     }
 
     $pdf = Text::PDF::File->new;
-    $pdf->{'Version'} = 3;
+    $pdf->{' version'} = 3;
     $root = Text::PDF::Pages->new($pdf);
     $root->proc_set('PDF', 'Text');
     $root->bbox(0, 0, $maxx, $maxy);
@@ -93,10 +94,12 @@ EOT
     $pdf_helvb = Text::PDF::SFont->new($pdf, "Helvetica-Bold", "FB");
     $pdf_helvi = Text::PDF::SFont->new($pdf, "Helvetica-Oblique", "FI");
     $pdf_helvbi = Text::PDF::SFont->new($pdf, "Helvetica-BoldOblique", "FBI");
-    $root->add_font($pdf_helv);
-    $root->add_font($pdf_helvb);
-    $root->add_font($pdf_helvi);
-    $root->add_font($pdf_helvbi);
+    $root->add_font($pdf_helv, $pdf);
+    $root->add_font($pdf_helvb, $pdf);
+    $root->add_font($pdf_helvi, $pdf);
+    $root->add_font($pdf_helvbi, $pdf);
+
+    $Font::TTF::Name::utf8 = 1;
 
     if ($^O eq "MacOS")
     {
@@ -123,7 +126,7 @@ EOT
                 ReleaseResource($rh);
                 $font = Font::TTF::Font->open($fh) || next;
                 process_font($package, $font, $pdf, $root, $maxx, $maxy, $num,
-                        $opt_f, $opt_m, $opt_p, $opt_q, $opt_s) unless ($num == 0);
+                        %opt) unless ($num == 0);
 #            }
 #            CloseResFile($rid);
         } else
@@ -131,20 +134,19 @@ EOT
     } else
     { $font = Font::TTF::Font->open($ARGV[0]) || die "Can't open font file $ARGV[0]"; }
     $pdf->create_file($ARGV[1]);
-    process_font($package, $font, $pdf, $root, $maxx, $maxy, "a0",
-            $opt_m, $opt_p, $opt_q, $opt_s);
+    process_font($package, $font, $pdf, $root, $maxx, $maxy, "a0", %opt);
     $pdf->close_file;
 }
 
 sub process_font
 {
-    my ($package, $font, $pdf, $root, $maxx, $maxy, $id,
-            $opt_f, $opt_m, $opt_p, $opt_q, $opt_s) = @_;
+    my ($package, $font, $pdf, $root, $maxx, $maxy, $id, %opt) = @_;
     my (@rev, $i, $numg, $upem, $mextx, $mexty, $tsize, $gsize);
     my ($tfont, $fname, $nump, $maxg, $pnum, $page, $cpyright, $ftrleft);
     my (@rowt, @roww, @row1, @row2, $hdrlft, $hdrright, $pcpy, $hdrbox, $hdrrw);
     my ($gcount, $tr, $tr1, $ppage, @time, @boxhdr, @boxloc, @cids, $numc, $gid);
     my ($type, $rpos);
+    my ($optgsize, $maxp);
 
 #    $font->tables_do(sub { $_[0]->read; });
     @rev = $font->{'cmap'}->read->reverse;
@@ -155,18 +157,25 @@ sub process_font
         $_[0]->read;
         my ($x) = ($_[0]->{'xMax'}-$_[0]->{'xMin'});
         $mextx = $x if $x > $mextx;
-        $_[0]->empty if ($numg > 1000 && !$opt_f);
+        $_[0]->empty if ($numg > 1000 && !$opt{f});
     });
     $mexty = ($font->{'head'}{'yMax'} - $font->{'head'}{'yMin'}) / 64;
     $mextx /= 48;
+    if ($opt{g})
+    {
+        my ($gextx, $gexty) = ($mextx * 48, $mexty * 64);
+        my ($gmextx) = ($maxx - 116) * $upem / $gextx;
+        my ($gmexty) = ($maxy - 288) * $upem / $gexty;
+        $optgsize = $gmextx > $gmexty ? $gmexty : $gmextx;
+    }
 
-    $tsize = $opt_m || int ($upem / ($mextx > $mexty ? $mextx : $mexty) * 100 - .5) / 100;
+    $tsize = $opt{m} || int ($upem / ($mextx > $mexty ? $mextx : $mexty) * 100 - .5) / 100;
     $gsize = int ($upem / $mexty * 25 - .5) / 100;
 #    print "tsize = $tsize\n";
 
     $tfont = Text::PDF::TTFont0->new($pdf, $font, "T$id");
-    $root->add_font($tfont);
-    if ($numg > 1000 && !$opt_f)
+    $root->add_font($tfont, $pdf);
+    if ($numg > 1000 && !$opt{f})
     {
         $tfont->ship_out($pdf);
         $tfont->empty;
@@ -178,20 +187,11 @@ sub process_font
     $maxg = (($maxy - 121) / 67) << 2;
     $nump = int (($numc + $maxg - 1) / $maxg);
 #    print "maxg = $maxg\nnump = $nump\n";
+    $maxp = $nump;
+    $maxp += $numc if ($opt{g});
 
-    $fname = $font->{'name'}->read->{'strings'}[4][1][0]{0};     # Try Mac string full name first
-    if ($fname eq "")                                            # Now Windows Unicode
-    {
-        $fname = $font->{'name'}{'strings'}[4][3][1]{1033};
-        $fname =~ s/(.)(.)/$2/oig if ($fname ne "");              # lazy 1252 conversion
-    }
-
-    $cpyright = $font->{'name'}{'strings'}[0][1][0]{0};
-    if ($cpyright eq "")
-    {
-        $cpyright = $font->{'name'}{'strings'}[0][3][1]{1033};
-        $cpyright =~ s/(.)(.)/$2/oig if ($cpyright);
-    }
+    $fname = $font->{'name'}->read->find_name(4);
+    $cpyright = $font->{'name'}->find_name(0);
     $cpyright = PDFStr($pdf_helv->trim($cpyright, ($maxx - 72) / 5.6));
 
     # 80% compressed 7pt Helvetica
@@ -211,7 +211,7 @@ use strict;
     $rpos = $maxx - 36 - $pdf_helv->width($hdrrw) * 5.6;
     $hdrlft .= "BT 1 0 0 1 $rpos ". ($maxy - 58) . " Tm 80 Tz /FR 7 Tf "
         . "($hdrrw) Tj ET\n";
-    $tr1 = " of $nump";
+    $tr1 = " of $maxp";
     $hdrrw = ($pdf_helv->width($tr) + $pdf_helv->width($tr1)) * 9.6;
     $hdrright = "BT 1 0 0 1 %x " . ($maxy - 48) .
         " Tm 80 Tz /FR 12 Tf ($tr) Tj /FB 12 Tf (%p) Tj /FR 12 Tf ($tr1) Tj ET\n";
@@ -241,12 +241,14 @@ use strict;
     @rowt = $package->row2hdr($font);
     @roww = widths(8, \@rowt);
     push (@row2, [[@rowt], [@roww], $maxy - 85, 8]);
+
+#    if (0)
     for ($pnum = 1; $pnum <= $nump; $pnum++)
     {
         my ($rtext, $ybase, $xcentre, $row, $yorg);
         my ($glyph, $xorg, $xadv, $gxorg, $gyorg, @rowm, @xorg, @parms, $gcol);
 
-        print STDERR "." unless ($opt_q || $^O eq "MacOS");
+        print STDERR "." unless ($opt{q} || $^O eq "MacOS");
         
         $ppage = Text::PDF::Page->new($pdf, $root);
         $ppage->add($hdrlft . $pcpy . $hdrbox . $ftrleft);
@@ -317,7 +319,7 @@ use strict;
                 @rowt = $package->row2(@parms);
                 @roww = widths(8, \@rowt);
                 push (@row2, [[@rowt], [@roww], $ybase + (3-$i) * 16 + .75, 8]);
-                $glyph->empty if ($glyph && $numg > 1000 && !$opt_f);
+                $glyph->empty if ($glyph && $numg > 1000 && !$opt{f});
             }
         $gcount += 4;
         last if ($gcount >= $numc);
@@ -331,7 +333,211 @@ use strict;
     $ppage->ship_out($pdf);
     $ppage->empty;
     }
+
+    return unless $opt{g};
+    
+    my ($fxmin, $fymin) = ($font->{'head'}{'xMin'}, $font->{'head'}{'yMin'});
+    my ($blob) = "q 2 w 1 J s Q";
+    my ($bigblob) = "q 4 w 1 J s Q";
+    my ($offblob) = "q .5 w 1 J s Q";
+    my ($rtext, $glyph, $gcol, $xorg, $yorg, $xwidth);
+    my ($points, $onoff, $ends, $corners, $j, @dirs, $txt, $jnext, $jprev);
+    my ($p, $x, $y, $e, $cx, $cy, $x0, $y0, $xlast, $ylast, $iscurve);
+    my ($tw, $tx, $ty, $ta);
+    
+    for ($i = 0; $i < $numc; $i++)
+    {
+        print STDERR "+" unless ($opt{q} || $^O eq "MacOS");
+
+        $gid = $package->cid_gid($cids[$i], $font);
+        $gid =~ s/^([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})\|//oi
+                && ($gcol = sprintf("%.2f %.2f %.2f rg",
+                                    hex($1), hex($2), hex($3)));
+        $glyph = $font->{'loca'}{'glyphs'}[$gid];
+        next unless $glyph;
+        $glyph->read;
+        $pnum = $nump + $i + 1;
+        $ppage = Text::PDF::Page->new($pdf, $root);
+        $ppage->add($hdrlft . $pcpy . $ftrleft);
+        $rpos = $maxx - ($hdrrw + $pdf_helvb->width($pnum) * 9.6) - 36;
+        $rtext = $hdrright;
+        $rtext =~ s/\%x/$rpos/oi;
+        $rtext =~ s/\%p/$pnum/oi;
+        $ppage->add($rtext);
+
+        $yorg = 144 - $fymin * $optgsize / $upem;
+        $ppage->add("$dots 58 $yorg m " . ($maxx - 58) . " $yorg l S [] 0 d\n");
+        $xorg = 58 - $fxmin * $optgsize / $upem;
+        $ppage->add("$dots $xorg 144 m $xorg " . ($maxy - 144) . " l S [] 0 d\n");
+        $xwidth = ($font->{'hmtx'}{'advance'}[$gid] - $fxmin) * $optgsize / $upem + 58;
+        $ppage->add("$dots $xwidth 144 m $xwidth " . ($maxy - 144) . " l S [] 0 d\n");
+        $ppage->add("BT 1 0 0 1 36 " . ($maxy - 132) . " Tm /T$id $tsize Tf 100 Tz " .
+                $gcol . sprintf("<%04X> Tj " . ($gcol ? "0 g " : "") . "ET\n", $gid));
+#        $ppage->add("BT 1 0 0 1 " . ($maxx - 36 - $pdf_helvb->width("$i") * 19.2) . " " .
+#                ($maxy - 136) . " Tm 80 Tz /FB 24 Tf ($i) Tj ET\n");
+        @rowt = $package->topdat($cids[$i], $gid, $glyph, $rev[$gid], $font);
+        foreach (@rowt) { s/^(.*?\|)?/r,b|/o; }
+        @roww = widths(24, \@rowt);
+        $ppage->add(out_row($pdf, 24, $maxy - 118, [[200, $maxx - 36]], [$rowt[0]]));
+        $ppage->add(out_row($pdf, 24, $maxy - 94, [[200, $maxx - 36]], [$rowt[1]]));
+
+        $points = [];
+        @dirs = ();
+        ($points, $onoff, $ends, $corners) = get_points($font, $glyph, $points, 1, 0, 0, 1);
+        $e = 0;
+        for ($j = 0; $j <= $#{$points}; $j++)
+        {
+            $x = ($points->[$j][0] - $fxmin) * $optgsize / $upem + 58;
+            $y = ($points->[$j][1] - $fymin) * $optgsize / $upem + 144;
+            $jnext = ($j == $ends->[$e] ? ($e == 0 ? 0 : $ends->[$e-1] + 1) : $j + 1);
+            $jprev = ($j == 0 || $j == $ends->[$e-1] + 1) ? $ends->[$e] : $j - 1;
+            if ($j == 0 || $j == $ends->[$e - 1] + 1)
+            {
+                unless ($j == 0)
+                {
+                    $ppage->add(curveto($cx, $cy, $x0, $y0, $xlast, $ylast)) if ($iscurve);
+                    $ppage->add(" s\n");
+                }
+                $ppage->add(sprintf("%.2f %.2f m", $x, $y));
+                ($x0, $y0) = ($xlast, $ylast) = ($x, $y);
+                $iscurve = 0;
+            } elsif (!$onoff->[$j])
+            {
+                if ($iscurve)
+                {
+                    ($tx, $ty) = (.5 * ($cx + $x), .5 * ($cy + $y));
+                    $ppage->add(curveto($cx, $cy, $tx, $ty, $xlast, $ylast));
+                    ($xlast, $ylast) = ($tx, $ty);
+                }
+                ($cx, $cy) = ($x, $y);
+                $iscurve = 1;
+            } else
+            {
+                if ($iscurve)
+                { $ppage->add(curveto($cx, $cy, $x, $y, $xlast, $ylast)); }
+                else
+                { $ppage->add(sprintf(" %.2f %.2f l", $x, $y)); }
+                $iscurve = 0;
+                ($xlast, $ylast) = ($x, $y);
+            }
+            push (@dirs, [($points->[$jprev][1] - $points->[$jnext][1]) / $upem,
+                            ($points->[$jnext][0] - $points->[$jprev][0]) / $upem]);
+            $e++ if ($j == $ends->[$e]);
+        }
+        if ($iscurve)
+        { $ppage->add(curveto($cx, $cy, $x0, $y0, $xlast, $ylast)); }
+        $ppage->add(" s\n");
+        $e = 0;
+        for ($j = 0; $j <= $#{$points}; $j++)
+        {
+            $x = ($points->[$j][0] - $fxmin) * $optgsize / $upem + 58;
+            $y = ($points->[$j][1] - $fymin) * $optgsize / $upem + 144;
+            $e++ if ($j == $ends->[$e] + 1);
+            $txt = $package->label($glyph, $j, @{$points->[$j]}, $e, $onoff->[$j], $font);
+            
+            if ($onoff->[$j])
+            {
+                if ($j == 0 || $j == $ends->[$e-1] + 1)
+                { $ppage->add(sprintf("%.2f %.2f m %s\n", $x, $y, $bigblob)); }
+                else
+                { $ppage->add(sprintf("%.2f %.2f m %s\n", $x, $y, $blob)); }
+            } else
+            { $ppage->add(sprintf("%.2f %.2f m %s\n", $x, $y, $offblob)); }
+            if ($txt ne '')
+            {
+                $tw = $pdf_helv->width($txt) * 4.8 + 2;         # 6pt + 2pt margin
+                $tx = $x + ($dirs[$j][0] > 0 ? 0 : -$tw);
+                $ty = $y + ($dirs[$j][1] > 0 ? 0 : -6);
+#                $tx = $dirs[$j][0] ? $tw / $dirs->[$j][0] : 300;
+#                $ty = $dirs[$j][1] ? 3 / $dirs->[$j][1] : 300;                   # centre == 2pt + 1pt margin
+#                $ta = (abs($tx) > abs($ty)) ? abs($ty) : abs($tx);
+#                $tx = $x + $ta * $dirs->[$j][0] * $optgsize;
+#                $ty = $y + $ta * $dirs->[$j][1] * $optgsize;
+                $ppage->add(sprintf("BT 1 0 0 1 %.2f %.2f Tm 80 Tz /FR 6 Tf %s Tj ET\n",
+                        $tx, $ty, asPDFStr($txt)));
+            }
+        }
+
+        $ppage->{' curstrm'}{'Filter'} = PDFArray(PDFName('FlateDecode'));
+        $ppage->ship_out($pdf);
+        $ppage->empty;
+    }
 }
+
+sub curveto
+{
+    my ($cx, $cy, $x, $y, $xl, $yl) = @_;
+    my ($p1x, $p1y, $p2x, $p2y);
+
+    $p1x = (2 * $cx + $xl) / 3;
+    $p1y = (2 * $cy + $yl) / 3;
+    $p2x = (2 * $cx + $x) / 3;
+    $p2y = (2 * $cy + $y) / 3;
+
+    sprintf(" %.2f %.2f %.2f %.2f %.2f %.2f c", $p1x, $p1y, $p2x, $p2y, $x, $y);
+}
+    
+
+# Taken from Geometric Algorithms - 2D Cross product
+sub clockwise
+{
+    my ($p0, $p1, $p2) = @_;
+    return ($p2->[0] - $p0->[0]) * ($p1->[1] - $p0->[1])
+        - ($p1->[0] - $p0->[0]) * ($p2->[1] - $p0->[1]);
+}
+
+
+sub get_points
+{
+    my ($font, $glyph, $points, @scale) = @_;
+    my ($onoff, $ends, $corners);
+    my ($comp, $g);
+
+    $glyph->read_dat;
+    if ($glyph->{'numberOfContours'} < 0)
+    {
+        foreach $comp (@{$glyph->{'comps'}})
+        {
+            my (@tcorner, $cg);
+            $cg = $font->{'loca'}{'glyphs'}[$comp->{'glyph'}];
+            my ($tpoints, $tonoff, $tends, $tcorners)
+                    = get_points($font, $cg, $points, mat_mult($comp->{'scale'}, \@scale));
+            my ($base) = $#{$points};
+            $base++ if ($base != 0);
+                
+            push (@$points, map {[$_->[0] + $comp->{'args'}[0], $_->[1] + $comp->{'args'}[1]]}
+                    @$tpoints);
+            push (@$onoff, @$tonoff);
+            push (@$ends, map {$_ + $base} @$tends);
+            
+            @tcorner = mat_mult($comp->{'flag'} & 200 ? $comp->{'scale'} : [1, 0, 0, 1],
+                    [$cg->{xMin}, $g->{'yMin'}, $cg->{'xMax'}, $cg->{'yMax'}]);
+            push (@$corners, [@tcorner]);
+        }
+        return ($points, $onoff, $ends, $corners);
+    } else
+    {
+        my ($count) = $glyph->{'numPoints'} - 1;
+
+        return ([map({[$glyph->{'x'}[$_], $glyph->{'y'}[$_]]} (0 .. $count))],
+            [map({$glyph->{'flags'}[$_] & 1} (0 .. $count))],
+            $glyph->{'endPoints'}, undef);
+    }
+}
+
+
+sub mat_mult
+{
+    my ($x, $y) = @_;
+    my (@res);
+
+    $res[0] = $x->[0]*$y->[0] + $x->[1]*$y->[2];
+    $res[1] = $x->[0]*$y->[1] + $x->[1]*$y->[3];
+    $res[2] = $x->[2]*$y->[0] + $x->[3]*$y->[2];
+    $res[3] = $x->[2]*$y->[1] + $x->[3]*$y->[4];
+    (@res);
+}
+        
 
 sub widths
 {
@@ -610,7 +816,7 @@ sub topdat
 {
     my ($class, $cid, $gid, $glyph, $uid, $font) = @_;
 
-    return ($gid, sprintf("r,r|x%04X", $uid));
+    return ($gid, sprintf("r,r|U+%04X", $uid));
 }
 
 
@@ -713,5 +919,30 @@ sub row2
     my ($class, $cid, $gid, $glyph, $uid, $font) = @_;
 
     return (",,008000|$font->{'post'}{'VAL'}[$gid]");
+}
+
+
+=head2 label
+
+Given:
+
+    Glyph
+    Point number
+    [x, y] point co-ordinates
+    path number
+    on or off point
+    font
+
+Returns a simple string for the label for the point
+
+=cut
+
+sub label
+{
+    my ($class, $glyph, $pnum, $x, $y, $path, $onoff, $font) = @_;
+
+    if ($glyph->{'numberOfContours'} > 0 && $onoff)
+    { return sprintf("%d.%d(%d,%d)", $pnum, $path, $x, $y); }
+    return '';
 }
 
